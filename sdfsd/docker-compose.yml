@@ -1,0 +1,64 @@
+version: "3.7"
+services:
+  app:
+    build:
+      args:
+        user: www
+        uid: 1000
+      context: ./
+      dockerfile: Dockerfile
+    image: laravel-image
+    container_name: laravel-api-app
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./htdocs_laravel:/var/www
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  db:
+    image: mysql:5.7
+    container_name: laravel-api-db
+    restart: unless-stopped
+    ports:
+      - "9995:3306"
+    environment:
+      MYSQL_DATABASE: test
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_PASSWORD: 12345678
+      MYSQL_USER: user
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+      - ./mysql/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: laravel-api-nginx
+    restart: unless-stopped
+    ports:
+      - 9996:80
+    volumes:
+      - ./htdocs_laravel:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+      
+  express:
+    image: node:12.14.1-alpine
+    working_dir: /htdocs_nodejs
+    container_name: api-nodejs
+    volumes:
+      - ./htdocs_nodejs/server.js:/htdocs_nodejs/server.js
+      - ./htdocs_nodejs/node_modules:/htdocs_nodejs/node_modules
+    command: node server.js
+    ports:
+      - "9997:3000"
+
+networks:
+  app-network:
+    driver: bridge
